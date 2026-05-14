@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.sqlite
+database.sqlite
+merged_output.csv
+dist/
+.DS_Store
