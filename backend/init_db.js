@@ -22,7 +22,8 @@ db.serialize(() => {
         person_city TEXT,
         person_country TEXT,
         person_industry TEXT,
-        person_image_url TEXT
+        person_image_url TEXT,
+        person_linkedin_url TEXT
     )`);
     
     db.run("CREATE INDEX idx_name ON contacts(full_name)");
@@ -39,8 +40,8 @@ db.serialize(() => {
         full_name, email1, email1_type, email1_status, email2, email2_type, email2_status,
         email3, email3_type, email3_status, email4, email4_type, email4_status,
         phone1, phone1_type, phone1_status, current_position, company_name, 
-        person_city, person_country, person_industry, person_image_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+        person_city, person_country, person_industry, person_image_url, person_linkedin_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
     let count = 0;
     let pending = 0;
@@ -63,7 +64,8 @@ db.serialize(() => {
             row.person_city || null,
             row.person_country || null,
             row.person_industry || null,
-            row.person_image_url || null
+            row.person_image_url || null,
+            row.person_linkedin_url || null
         ], (err) => {
             if (err) console.error(err);
             pending--;

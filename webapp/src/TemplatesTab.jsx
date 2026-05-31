@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Trash2, FileText, Loader2, Pencil, X } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
 
 export default function TemplatesTab() {
   const [templates, setTemplates] = useState([]);

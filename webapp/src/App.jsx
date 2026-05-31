@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Building2, Briefcase, MapPin, Download, LogOut,
-  Search, Filter, ChevronLeft, ChevronRight, Activity, LayoutDashboard, Contact, Phone, Mail, Loader2, Save, List, ArrowLeft, FileText, Send
+  Search, Filter, ChevronLeft, ChevronRight, Activity, LayoutDashboard, Contact, Phone, Mail, Loader2, Save, List, ArrowLeft, FileText, Send, MessageCircle, X, Edit2, ExternalLink
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -10,17 +10,22 @@ import {
 } from 'recharts';
 import TemplatesTab from './TemplatesTab';
 import CampaignsTab from './CampaignsTab';
+import WhatsappTab from './WhatsappTab';
+import UploaderTab from './UploaderTab';
 import LoginPage from './LoginPage';
 
 import './index.css';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('gld_auth') === 'true');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('gld_active_tab') || 'dashboard');
   
+  useEffect(() => {
+    localStorage.setItem('gld_active_tab', activeTab);
+  }, [activeTab]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
@@ -33,6 +38,7 @@ function App() {
   const [companyFilter, setCompanyFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
+  const [listTagFilter, setListTagFilter] = useState('');
   
   const [page, setPage] = useState(1);
   const rowsPerPage = 12;
@@ -167,6 +173,7 @@ function App() {
   const handleSaveList = async () => {
     const listName = prompt("Enter a name for this list:");
     if (!listName) return;
+    const listTags = prompt("Enter tags for this list (comma-separated, optional):");
 
     setIsSavingList(true);
     try {
@@ -186,7 +193,7 @@ function App() {
       const res = await fetch(`${API_BASE}/lists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: listName, filters })
+        body: JSON.stringify({ name: listName, tags: listTags || '', filters })
       });
       const result = await res.json();
       
@@ -200,6 +207,22 @@ function App() {
     } finally {
       setIsSavingList(false);
     }
+  };
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setCompanyFilter('');
+    setPositionFilter('');
+    setEmailSourceFilter('email1');
+    setEmailTypeFilter('');
+    setPhoneTypeFilter('');
+    setEmailStatusFilter('');
+    setPhoneStatusFilter('');
+    setIndustryFilter('');
+    setCountryFilter('');
+    setCityFilter('');
+    setPage(1);
   };
 
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
@@ -265,6 +288,14 @@ function App() {
                   <span>{row.phone1}</span>
                 </div>
               )}
+              {row.person_linkedin_url && (
+                <div className="contact-row" style={{ marginTop: '4px' }}>
+                  <ExternalLink size={14} />
+                  <a href={row.person_linkedin_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {row.person_linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '')}
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="contact-tags">
@@ -283,6 +314,14 @@ function App() {
       </AnimatePresence>
     </div>
   );
+
+  const uniqueListTags = Array.from(new Set(
+    savedLists.flatMap(l => l.tags ? l.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
+  )).sort();
+
+  const filteredSavedLists = listTagFilter 
+    ? savedLists.filter(l => l.tags && l.tags.split(',').map(t => t.trim()).includes(listTagFilter))
+    : savedLists;
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
@@ -364,6 +403,28 @@ function App() {
             }}
           >
             <Send size={18} /> Campaigns
+          </button>
+          <button 
+            onClick={() => { setActiveTab('whatsapp'); setActiveList(null); }}
+            style={{ 
+              background: activeTab === 'whatsapp' ? 'var(--accent-glow)' : 'transparent',
+              color: activeTab === 'whatsapp' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              border: activeTab === 'whatsapp' ? '1px solid var(--accent)' : '1px solid transparent',
+              padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s', fontWeight: 500
+            }}
+          >
+            <MessageCircle size={18} /> WhatsApp
+          </button>
+          <button 
+            onClick={() => { setActiveTab('uploader'); setActiveList(null); }}
+            style={{ 
+              background: activeTab === 'uploader' ? 'var(--accent-glow)' : 'transparent',
+              color: activeTab === 'uploader' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              border: activeTab === 'uploader' ? '1px solid var(--accent)' : '1px solid transparent',
+              padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s', fontWeight: 500
+            }}
+          >
+            <Download size={18} /> Import
           </button>
         </div>
       </motion.header>
@@ -468,15 +529,23 @@ function App() {
               {isSavingList ? 'Saving...' : `Save ${totalRecords.toLocaleString()} Results to List`}
             </button>
 
+            <button 
+              className="btn" 
+              style={{ width: '100%', marginBottom: '1.5rem', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-glass)' }}
+              onClick={resetFilters}
+            >
+              Reset All Filters
+            </button>
+
             <div className="filter-group">
-              <label className="filter-label">Search Name</label>
+              <label className="filter-label">Search Contacts</label>
               <div style={{ position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input 
                   type="text" 
                   className="input-styled" 
                   style={{ paddingLeft: '2.5rem' }}
-                  placeholder="John Doe..." 
+                  placeholder="Name, email, phone..." 
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
                 />
@@ -646,16 +715,57 @@ function App() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           {!activeList ? (
             <div className="data-view">
-              <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Your Saved Lists</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Your Saved Lists</h2>
+                {uniqueListTags.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button 
+                      style={{ 
+                        padding: '0.4rem 1rem', 
+                        borderRadius: '20px', 
+                        border: listTagFilter === '' ? '1px solid var(--accent)' : '1px solid var(--border-glass)',
+                        background: listTagFilter === '' ? 'var(--accent-glow)' : 'var(--bg-glass)',
+                        color: listTagFilter === '' ? 'var(--accent-light)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        fontSize: '0.85rem',
+                        fontWeight: listTagFilter === '' ? 500 : 400
+                      }}
+                      onClick={() => setListTagFilter('')}
+                    >
+                      All
+                    </button>
+                    {uniqueListTags.map(tag => (
+                      <button 
+                        key={tag}
+                        style={{ 
+                          padding: '0.4rem 1rem', 
+                          borderRadius: '20px', 
+                          border: listTagFilter === tag ? '1px solid var(--accent)' : '1px solid var(--border-glass)',
+                          background: listTagFilter === tag ? 'var(--accent-glow)' : 'var(--bg-glass)',
+                          color: listTagFilter === tag ? 'var(--accent-light)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          fontSize: '0.85rem',
+                          fontWeight: listTagFilter === tag ? 500 : 400
+                        }}
+                        onClick={() => setListTagFilter(listTagFilter === tag ? '' : tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               
               {loading ? (
                 <div className="glass-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
                   <Loader2 className="animate-spin" size={40} color="var(--accent)" />
                   Loading lists...
                 </div>
-              ) : savedLists.length > 0 ? (
+              ) : filteredSavedLists.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                  {savedLists.map((list) => (
+                  {filteredSavedLists.map((list) => (
                     <motion.div 
                       key={list.id}
                       className="glass-card"
@@ -667,8 +777,44 @@ function App() {
                         <div className="stat-icon" style={{ background: 'var(--accent-glow)' }}>
                           <List size={24} color="var(--accent-light)" />
                         </div>
-                        <div>
-                          <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{list.name}</h3>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</h3>
+                            <button className="btn" style={{ padding: '0.2rem', background: 'transparent', color: 'var(--text-secondary)' }} onClick={async (e) => {
+                              e.stopPropagation();
+                              const newName = window.prompt('Enter new list name:', list.name);
+                              if (newName && newName !== list.name) {
+                                await fetch(`${API_BASE}/lists/${list.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: newName }) });
+                                setSavedLists(savedLists.map(l => l.id === list.id ? { ...l, name: newName } : l));
+                              }
+                            }}>
+                              <Edit2 size={16} />
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.25rem', minHeight: '24px' }}>
+                            {list.tags ? list.tags.split(',').map(tag => tag.trim() && (
+                              <span key={tag} className="tag" style={{ background: 'var(--bg-glass)', color: 'var(--text-secondary)', fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                                {tag.trim()}
+                              </span>
+                            )) : <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No tags</span>}
+                            <button 
+                              title="Edit Tags"
+                              className="btn" 
+                              style={{ padding: '0.1rem 0.3rem', background: 'transparent', color: 'var(--text-muted)', marginLeft: '0.25rem', opacity: 0.7 }} 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const newTags = window.prompt('Enter tags (comma separated, leave blank to remove all):', list.tags || '');
+                                if (newTags !== null && newTags !== (list.tags || '')) {
+                                  await fetch(`${API_BASE}/lists/${list.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tags: newTags }) });
+                                  setSavedLists(savedLists.map(l => l.id === list.id ? { ...l, tags: newTags } : l));
+                                }
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.opacity = 1; }}
+                              onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.opacity = 0.7; }}
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
                           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                             Created on {new Date(list.created_at).toLocaleDateString()}
                           </p>
@@ -680,7 +826,16 @@ function App() {
                           {list.count.toLocaleString()} Contacts
                         </span>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <button className="btn" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }} onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:3001/api/lists/${list.id}/export`, '_blank'); }}>
+                          <button className="btn" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }} onClick={async (e) => { 
+                            e.stopPropagation(); 
+                            if(window.confirm('Delete this list?')) {
+                              await fetch(`${API_BASE}/lists/${list.id}`, { method: 'DELETE' });
+                              setSavedLists(savedLists.filter(l => l.id !== list.id));
+                            }
+                          }}>
+                            <X size={14} /> Delete
+                          </button>
+                          <button className="btn" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }} onClick={(e) => { e.stopPropagation(); window.open(`${API_BASE}/lists/${list.id}/export`, '_blank'); }}>
                             <Download size={14} /> CSV
                           </button>
                           <ChevronRight size={16} color="var(--accent)" />
@@ -752,6 +907,10 @@ function App() {
       {activeTab === 'templates' && <TemplatesTab />}
 
       {activeTab === 'campaigns' && <CampaignsTab />}
+
+      {activeTab === 'whatsapp' && <WhatsappTab />}
+
+      {activeTab === 'uploader' && <UploaderTab />}
     </div>
   );
 }
